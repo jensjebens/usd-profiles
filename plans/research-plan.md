@@ -1,0 +1,42 @@
+# Research Plan — USD Profiles Unification
+
+## Motivation
+
+Four separate projects address USD asset validation and/or profile-based capability declaration. Understanding each project's scope, architecture, and overlap is the first step toward identifying a unification path.
+
+**Task:** https://github.com/jensjebens/usd-profiles/issues/1
+
+## Acceptance Criteria
+
+1. One summary document per project in `research/`, covering: purpose, architecture, key concepts, status, and source links.
+2. A comparison matrix (`research/00-comparison-matrix.md`) identifying overlap, gaps, and architectural differences.
+3. No solution proposals yet — summaries only.
+4. All committed to `jensjebens/usd-profiles`.
+
+## Projects
+
+| # | Project | Primary Source |
+|---|---------|---------------|
+| 1 | Omniverse USD_Profiles (`omni.capabilities`) | Bundled in `omniverse-asset-validator` 1.11.2 (`omni/capabilities/`) |
+| 2 | Pixar USD-Profiles Proposal | [OpenUSD-proposals/profiles](https://github.com/PixarAnimationStudios/OpenUSD-proposals/tree/main/proposals/profiles) |
+| 3 | Pixar UsdValidation | [OpenUSD dev `pxr/usdValidation`](https://github.com/PixarAnimationStudios/OpenUSD/tree/dev/pxr/usdValidation) |
+| 4 | Omniverse Asset Validator | [PyPI `omniverse-asset-validator`](https://pypi.org/project/omniverse-asset-validator/) v1.11.2 |
+
+## Approach
+
+### Phase 1: Individual Summaries (this PR)
+Write one markdown file per project:
+- `research/01-omniverse-usd-profiles.md` — NVIDIA's `omni.capabilities` package
+- `research/02-pixar-profiles-proposal.md` — Pixar's declarative capability taxonomy proposal
+- `research/03-pixar-usd-validation.md` — Pixar's core UsdValidation framework
+- `research/04-omniverse-asset-validator.md` — NVIDIA's extensible asset validator
+
+### Phase 2: Comparison Matrix
+- `research/00-comparison-matrix.md` — side-by-side comparison of scope, concepts, architecture, validation approach, extensibility model, and maturity.
+
+## Open Questions
+
+1. Is `omni.capabilities` published independently or only bundled inside `omniverse-asset-validator`?
+2. Does Pixar's Profiles proposal reference or depend on UsdValidation, or are they separate efforts?
+3. How far along is the `_usd_validator_adapter.py` bridge between OV asset validator and Pixar's UsdValidation?
+4. Are there other NVIDIA repos (e.g. an `omni-capabilities` PyPI package) we haven't found yet?
