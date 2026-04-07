@@ -1,0 +1,236 @@
+# Phase 2a Design: ProfileAPI Implementation
+
+## Location
+
+New schema module: `pxr/usd/usdProfiles/`
+
+This follows the convention of other schema modules (`usdPhysics`, `usdGeom`, `usdShade`, etc.).
+
+## Schema Definition (`schema.usda`)
+
+### ProfileAPI — Applied API Schema
+
+```usda
+#usda 1.0
+(
+    subLayers = [
+        @usd/schema.usda@
+    ]
+)
+
+over "GLOBAL" (
+    customData = {
+        string libraryName = "usdProfiles"
+        string libraryPath = "pxr/usd/usdProfiles"
+        bool useLiteralIdentifier = 0
+        dictionary libraryTokens = {
+            dictionary profile = {
+                string doc = """Token for profile attribute."""
+            }
+        }
+    }
+) {}
+
+class "ProfileAPI"
+(
+    customData = {
+        string className = "ProfileAPI"
+        token[] apiSchemaAutoApplyTo = []
+    }
+
+    doc = """Applied API schema for declaring that a prim (and its descendants)
+    conform to a specific USD Profile — a named set of capabilities.
+    
+    A Profile is a tagged node in a capability DAG representing a coherent
+    set of functionality. Applying ProfileAPI to a prim declares that the
+    subtree rooted at that prim satisfies the capabilities required by
+    the named profile.
+    
+    Resolution: If no ProfileAPI is authored on a prim, the nearest
+    ancestor's ProfileAPI applies. Capability requirements do not
+    propagate upward through hierarchies.
+    
+    See: https://github.com/PixarAnimationStudios/OpenUSD-proposals/tree/main/proposals/profiles
+    """
+
+    inherits = </APISchemaBase>
+)
+{
+    token profiles:profile (
+        customData = {
+            string apiName = "profile"
+        }
+        displayName = "Profile"
+        doc = """The profile identifier this prim conforms to.
+        Uses reverse domain notation, e.g.:
+        - com.nvidia.simready.prop_robotics_neutral
+        - usd.core.v25_05
+        - aousd.interchange.v1_0
+        """
+    )
+    
+    token[] profiles:capabilities (
+        customData = {
+            string apiName = "capabilities"
+        }
+        displayName = "Capabilities"
+        doc = """Explicit list of capability identifiers this prim requires,
+        beyond those implied by the profile. Uses reverse domain notation.
+        """
+    )
+}
+```
+
+### Key Design Decisions
+
+1. **Single-apply API** — A prim has at most one ProfileAPI applied (the "most local" profile governs).
+
+2. **Two attributes:**
+   - `profiles:profile` — The profile name (e.g. `com.nvidia.simready.prop_robotics_neutral`)
+   - `profiles:capabilities` — Optional explicit capability list for fine-grained declarations
+
+3. **Resolution follows USD value resolution** — standard opinion strength, nearest ancestor wins.
+
+## Capability Registry
+
+### plugInfo.json Capability Declarations
+
+Per the Pixar proposal, capabilities are declared in `plugInfo.json`:
+
+```json
+{
+    "Plugins": [{
+        "Info": {
+            "Capabilities": {
+                "com.nvidia.simready": {
+                    "docstring": "SimReady asset capabilities for simulation",
+                    "predecessors": ["usd"]
+                },
+                "com.nvidia.simready.geom": {
+                    "docstring": "SimReady geometry capabilities",
+                    "predecessors": ["com.nvidia.simready"]
+                }
+            }
+        }
+    }]
+}
+```
+
+### CapabilityRegistry
+
+New C++ class `UsdProfilesCapabilityRegistry`:
+- Singleton, populated at plugin load time from `plugInfo.json` "Capabilities" sections
+- Stores the capability DAG (nodes + predecessor edges)
+- Query methods: `GetCapability(token)`, `GetPredecessors(token)`, `GetTransitivePredecessors(token)`, `IsCapability(token)`
+- Thread-safe (read-only after initialization)
+
+### ProfileRegistry
+
+New C++ class `UsdProfilesProfileRegistry`:
+- Profiles are capabilities tagged with `"isProfile": true` in the DAG
+- Query methods: `GetProfile(token)`, `GetProfileCapabilities(token)`, `IsProfile(token)`
+- Resolves a profile to its full transitive capability set
+
+## Capability Queries
+
+### Explicit Query (via ProfileAPI)
+
+```cpp
+UsdProfilesProfileAPI api(prim);
+TfToken profile = api.GetProfileAttr().Get<TfToken>();
+// Returns the authored profile, or empty if none
+```
+
+For ancestor resolution:
+```cpp
+TfToken UsdProfilesGetEffectiveProfile(UsdPrim prim);
+// Walks ancestors until ProfileAPI is found
+```
+
+### Introspective Query
+
+```cpp
+TfTokenVector UsdProfilesInferCapabilities(UsdPrim prim);
+// Examines applied schemas and infers required capabilities
+// e.g. if UsdPhysicsRigidBodyAPI is applied → com.nvidia.simready.physics.rigidBodies
+```
+
+This requires a mapping from schema types to capabilities, declared in plugInfo.json:
+```json
+"UsdPhysicsRigidBodyAPI": {
+    "capabilities": ["com.nvidia.simready.physics.rigidBodies"]
+}
+```
+
+## File Structure
+
+```
+pxr/usd/usdProfiles/
+├── CMakeLists.txt
+├── api.h
+├── overview.dox
+├── plugInfo.json
+├── schema.usda
+├── generatedSchema.usda        (auto-generated by usdGenSchema)
+├── profileAPI.h                 (auto-generated + manual)
+├── profileAPI.cpp
+├── capabilityRegistry.h
+├── capabilityRegistry.cpp
+├── profileRegistry.h
+├── profileRegistry.cpp
+├── queries.h                    (convenience query functions)
+├── queries.cpp
+├── tokens.h
+├── tokens.cpp
+├── module.cpp
+├── moduleDeps.cpp
+├── pch.h
+├── wrapProfileAPI.cpp           (Python bindings)
+├── wrapCapabilityRegistry.cpp
+├── wrapProfileRegistry.cpp
+├── wrapQueries.cpp
+├── __init__.py
+└── testenv/
+    ├── testUsdProfilesBasic/
+    └── testUsdProfilesQueries/
+```
+
+## Build Integration
+
+Add to `pxr/usd/CMakeLists.txt`:
+```cmake
+add_subdirectory(usdProfiles)
+```
+
+Dependencies: `usd`, `sdf`, `tf`, `plug`
+
+## Phase 2a Scope (MVP)
+
+For the initial implementation, focus on:
+1. ✅ Schema definition (`schema.usda`) + `plugInfo.json`
+2. ✅ ProfileAPI applied schema (generated via `usdGenSchema`)
+3. ✅ CapabilityRegistry (load from plugInfo.json)
+4. ✅ Explicit queries (read ProfileAPI from prims, ancestor resolution)
+5. ❌ Introspective queries (Phase 2a.2 — needs schema-to-capability mapping)
+6. ❌ Traversal pruning optimizations (Phase 2a.3)
+
+## Usage Example
+
+```python
+from pxr import Usd, UsdProfiles
+
+# Author a profile on a prim
+stage = Usd.Stage.CreateInMemory()
+root = stage.DefinePrim("/Robot", "Xform")
+api = UsdProfiles.ProfileAPI.Apply(root)
+api.GetProfileAttr().Set("com.nvidia.simready.robot_body_neutral")
+
+# Query
+profile = UsdProfiles.GetEffectiveProfile(root)
+# → "com.nvidia.simready.robot_body_neutral"
+
+# Check capabilities
+registry = UsdProfiles.CapabilityRegistry()
+caps = registry.GetProfileCapabilities("com.nvidia.simready.robot_body_neutral")
+# → ["com.nvidia.simready.geom", "com.nvidia.simready.physics.rigidBodies", ...]
+```
