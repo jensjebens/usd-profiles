@@ -57,15 +57,34 @@ TARGET (unified):
 **1a. Capability name mapping**
 Create a rosetta stone between NVIDIA requirement codes and Pixar capability identifiers:
 
-| NVIDIA Code | NVIDIA Name | Proposed Pixar Capability |
-|-------------|-------------|--------------------------|
-| `VG.014` | `usdgeom-mesh-topology` | `usd.geom.mesh.topology` |
-| `VG.027` | `usdgeom-mesh-normals-exist` | `usd.geom.mesh.normals` |
-| `RB.003` | `rigid-body-schema-application` | `usd.physics.rigidBody` |
-| `UN.001` | `upaxis` | `usd.stage.upAxis` |
+| NVIDIA Code | NVIDIA Name | Proposed Capability ID |
+|-------------|-------------|------------------------|
+| `VG.014` | `usdgeom-mesh-topology` | `com.nvidia.simready.geom.mesh.topology` |
+| `VG.027` | `usdgeom-mesh-normals-exist` | `com.nvidia.simready.geom.mesh.normals` |
+| `RB.003` | `rigid-body-schema-application` | `com.nvidia.simready.physics.rigidBody` |
+| `UN.001` | `upaxis` | `com.nvidia.simready.stage.upAxis` |
+| `SL.001` | `semantic-label-capability` | `com.nvidia.simready.semantics.labels` |
 | ... | ... | ... |
 
-This mapping preserves NVIDIA's requirement codes as validator-level identifiers while placing them within Pixar's capability hierarchy.
+SimReady requirements use NVIDIA's reverse domain notation (`com.nvidia.simready.*`) as vendor extensions per the Pixar proposal's extension rules. This clearly distinguishes them from core `usd.*` capabilities while preserving full traceability to existing NVIDIA requirement codes.
+
+Core USD validation rules (e.g. those that duplicate what Pixar's built-in `usdGeomValidators` already check) should map to the canonical `usd.*` namespace instead, avoiding duplication. SimReady-specific rules (semantic labels, dense captions, non-visual materials, RTX-specific) belong under `com.nvidia.simready.*`.
+
+Per the Pixar proposal, vendor extensions **must transitively inherit from `usd`**:
+```
+usd (root)
+└── com.nvidia.simready
+    ├── com.nvidia.simready.geom
+    │   ├── com.nvidia.simready.geom.mesh.topology
+    │   └── com.nvidia.simready.geom.mesh.normals
+    ├── com.nvidia.simready.physics
+    │   ├── com.nvidia.simready.physics.rigidBody
+    │   └── com.nvidia.simready.physics.joints
+    ├── com.nvidia.simready.semantics
+    │   └── com.nvidia.simready.semantics.labels
+    └── com.nvidia.simready.stage
+        └── com.nvidia.simready.stage.upAxis
+```
 
 **1b. Hierarchy alignment**
 Map NVIDIA's 4-level hierarchy to Pixar's DAG:
@@ -84,13 +103,17 @@ Decide on versioning strategy:
 - Option C: Map semver to USD-style (e.g. `1.0.0` → `_v1`, `2.0.0` → `_v2`, minor/patch handled at validator level)
 
 **1d. Domain mapping**
-Map NVIDIA's compatibility tags to Pixar's three domains:
+Map NVIDIA's compatibility tags to Pixar's three domains and namespaces:
 
-| NVIDIA Tag | Pixar Domain | Notes |
-|-----------|-------------|-------|
-| `core-usd`, `open-usd` | Prim / Layer | Core USD validation |
-| `rtx`, `physx`, `kit` | Application | Runtime-specific |
-| `omniverse` | Application | Vendor extension (`nvidia.omniverse.*`) |
+| NVIDIA Tag | Pixar Domain | Capability Namespace | Notes |
+|-----------|-------------|---------------------|-------|
+| `core-usd`, `open-usd` | Prim / Layer | `usd.*` (canonical) | Delegate to Pixar's built-in validators where they exist |
+| `rtx` | Application | `com.nvidia.simready.rtx.*` | RTX-specific limitations/requirements |
+| `physx` | Application | `com.nvidia.simready.physx.*` | PhysX-specific limitations |
+| `kit`, `kit-107+` | Application | `com.nvidia.kit.*` | Omniverse Kit-specific |
+| `omniverse` | Application | `com.nvidia.omniverse.*` | General Omniverse vendor extension |
+
+Rules tagged `core-usd` / `open-usd` that overlap with Pixar's built-in validators (e.g. `usdGeomValidators:StageMetadataChecker`) should reference the canonical `usd.*` capability rather than duplicating under `com.nvidia.simready.*`.
 
 ### Phase 2: Infrastructure (make UsdValidation the engine)
 
@@ -111,7 +134,7 @@ Update `omniverse-usd-profiles` codegen to output:
 For each `BaseRuleChecker` in `omniverse-asset-validator`:
 1. Create a `UsdValidatePrimTaskFn` / `UsdValidateStageTaskFn` / `UsdValidateLayerTaskFn`
 2. Register via `TF_REGISTRY_FUNCTION(UsdValidationRegistry)` or Python equivalent
-3. Map NVIDIA requirement codes to validator names: `simready:VG.014`
+3. Map NVIDIA requirement codes to validator names: `com.nvidia.simready:VG.014`
 4. Port fixers to `UsdValidationFixer`
 
 Python validators first (faster iteration), C++ for performance-critical rules later.
@@ -119,7 +142,7 @@ Python validators first (faster iteration), C++ for performance-critical rules l
 **2d. Profile-based validation CLI**
 Leverage Pixar's proposed `usdchecker --profile`:
 ```bash
-usdchecker --profile simready.prop_robotics_neutral asset.usda
+usdchecker --profile com.nvidia.simready.prop_robotics_neutral asset.usda
 ```
 
 ### Phase 3: Migration (swap out the NVIDIA engine)
