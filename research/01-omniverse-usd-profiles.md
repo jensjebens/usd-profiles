@@ -2,7 +2,7 @@
 
 ## Overview
 
-NVIDIA's implementation of a USD profiles/capabilities system, shipped as the `omni.capabilities` Python package bundled inside `omniverse-asset-validator` ≥ 1.11.2. Not published independently on PyPI (as of April 2026). Apache-2.0 licensed (NVIDIA copyright 2025–2026).
+NVIDIA's implementation of a USD profiles/capabilities system, shipped as the `omni.capabilities` Python package bundled inside `omniverse-asset-validator` ≥ 1.11.2. **Generated** by `omniverse-usd-profiles` (PyPI v1.11.0) from markdown spec files in the `nvidia/simready-foundation` repository. Not published independently on PyPI. Apache-2.0 licensed (NVIDIA copyright 2025–2026).
 
 ## Purpose
 

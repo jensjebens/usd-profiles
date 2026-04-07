@@ -2,14 +2,14 @@
 
 ## Project Scope
 
-| Dimension | Pixar USD-Profiles Proposal | Pixar UsdValidation | NVIDIA `omni.capabilities` | NVIDIA Asset Validator |
-|-----------|---------------------------|--------------------|-----------------------------|----------------------|
-| **Primary purpose** | Declarative capability taxonomy for interoperability | Validation execution framework | Requirements/capabilities data model | Extensible asset validation engine |
-| **What it defines** | What capabilities exist and how they relate | How to run and register validators | What rules/capabilities/features exist | Concrete validation rules + auto-fix |
-| **Analogy** | Package dependency graph | Test runner (pytest) | Test metadata catalogue | Test suite (with runner) |
-| **Language** | Spec / proposal document | C++ with Python bindings | Pure Python | Pure Python |
-| **Status** | Proposal (not implemented) | On `dev` branch (not released) | Bundled in OV validator 1.11.2 | Production (PyPI v1.11.2) |
-| **License** | N/A (proposal) | Apache-2.0 (OpenUSD) | Apache-2.0 (NVIDIA) | Apache-2.0 (NVIDIA) |
+| Dimension | Pixar USD-Profiles Proposal | Pixar UsdValidation | NVIDIA SimReady Foundation | NVIDIA `omni.usd_profiles` | NVIDIA `omni.capabilities` | NVIDIA Asset Validator |
+|-----------|---------------------------|--------------------|-----------------------------|---------------------------|------------------------------|----------------------|
+| **Primary purpose** | Declarative capability taxonomy for interoperability | Validation execution framework | Simulation content spec repository | Spec parser + Python code generator | Requirements/capabilities data model (generated) | Extensible asset validation engine |
+| **What it defines** | What capabilities exist and how they relate | How to run and register validators | What SimReady assets must satisfy | How to turn markdown specs into code | What rules/capabilities/features exist | Concrete validation rules + auto-fix |
+| **Analogy** | Package dependency graph | Test runner (pytest) | Test specifications (markdown) | Schema compiler | Test metadata catalogue (compiled output) | Test suite (with runner) |
+| **Language** | Spec / proposal document | C++ with Python bindings | Markdown + Python | Pure Python (Jinja2 codegen) | Pure Python (generated) | Pure Python |
+| **Status** | Proposal (not implemented) | On `dev` branch (not released) | Public repo (2026) | PyPI v1.11.0 | Generated, bundled in OV validator | Production (PyPI v1.11.2) |
+| **License** | N/A (proposal) | Apache-2.0 (OpenUSD) | Apache-2.0 (NVIDIA) | Apache-2.0 (NVIDIA) | Apache-2.0 (NVIDIA) | Apache-2.0 (NVIDIA) |
 
 ## Conceptual Model
 
@@ -45,34 +45,39 @@
 ## Overlap & Relationship
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                Pixar USD-Profiles Proposal               │
-│  (Declarative capability taxonomy — the "what")          │
-│                                                         │
-│  ┌──────────────────────┐  ┌──────────────────────────┐ │
-│  │ Pixar UsdValidation  │  │ NVIDIA omni.capabilities │ │
-│  │ (Execution engine —  │  │ (Data model — the        │ │
-│  │  the "how")          │  │  "catalogue")            │ │
-│  └──────────┬───────────┘  └────────────┬─────────────┘ │
-│             │                           │               │
-│             │    ┌──────────────────┐   │               │
-│             └────┤  NVIDIA Asset    ├───┘               │
-│                  │  Validator       │                    │
-│                  │  (Concrete rules │                    │
-│                  │   + engine)      │                    │
-│                  └──────────────────┘                    │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                  Pixar USD-Profiles Proposal                         │
+│   (Declarative capability taxonomy — the "what")                     │
+│                                                                      │
+│   ┌──────────────────────┐                                           │
+│   │ Pixar UsdValidation  │    NVIDIA Stack:                          │
+│   │ (Execution engine —  │                                           │
+│   │  the "how")          │    SimReady Foundation (markdown specs)    │
+│   └──────────┬───────────┘            │                              │
+│              │                        ▼                              │
+│              │              omniverse-usd-profiles (parser+codegen)  │
+│              │                        │                              │
+│              │                        ▼                              │
+│              │              omni.capabilities (generated enums)      │
+│              │                        │                              │
+│              │     ┌──────────────────┘                              │
+│              └─────┤  NVIDIA Asset Validator                         │
+│                    │  (rules + engine + UsdValidation bridge)        │
+│                    └─────────────────────────────────────            │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Key Relationships
 
-1. **Pixar Profiles ↔ UsdValidation**: The Profiles proposal explicitly references UsdValidation for its validation story (`usdchecker --profile`). They are complementary: Profiles defines *what to check*, UsdValidation defines *how to check*.
+1. **SimReady Foundation → `omniverse-usd-profiles` → `omni.capabilities`**: This is a spec-to-code pipeline. SimReady defines requirements, capabilities, features, and profiles as markdown files. `omniverse-usd-profiles` parses them and generates Python code (`omni.capabilities`). This generated code is bundled into `omniverse-asset-validator`.
 
-2. **NVIDIA `omni.capabilities` ↔ Pixar Profiles**: Both define a taxonomy of capabilities/requirements, but with different structures (flat hierarchy vs. DAG) and different versioning (semver vs. USD-style). NVIDIA's is more concrete (actual requirement enums with codes), Pixar's is more architectural (how capabilities relate and propagate).
+2. **Pixar Profiles ↔ UsdValidation**: The Profiles proposal explicitly references UsdValidation for its validation story (`usdchecker --profile`). They are complementary: Profiles defines *what to check*, UsdValidation defines *how to check*.
 
-3. **NVIDIA Asset Validator ↔ UsdValidation**: The asset validator has an explicit adapter layer (`_usd_validator_adapter.py`) to bridge to Pixar's UsdValidation protocols. This is labeled "temporary" — suggesting planned convergence.
+3. **NVIDIA stack ↔ Pixar Profiles**: Both define a taxonomy of capabilities/requirements, but with different structures (flat hierarchy vs. DAG) and different versioning (semver vs. USD-style). NVIDIA's is more concrete (actual requirement enums with codes), Pixar's is more architectural (how capabilities relate and propagate).
 
-4. **NVIDIA Asset Validator ↔ `omni.capabilities`**: The validator bundles and uses the capabilities package to map requirements to rules.
+4. **NVIDIA Asset Validator ↔ UsdValidation**: The asset validator has an explicit adapter layer (`_usd_validator_adapter.py`) to bridge to Pixar's UsdValidation protocols. This is labeled "temporary" — suggesting planned convergence.
+
+5. **SimReady Foundation profiles**: The first concrete profiles are simulation-focused (Prop-Robotics-Neutral, Robot-Body-Isaac, etc.), demonstrating the system's primary use case: ensuring USD assets are simulation-ready.
 
 ## Gap Analysis
 
