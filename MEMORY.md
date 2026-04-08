@@ -74,6 +74,14 @@ The projects form complementary layers, not competitors:
 - Reference: Matt Kuruc's SDD at `research/sdd-asset-validator-entrypoint-plugins.md`
 - Forked: jensjebens/simready-foundation
 
+## Phase A — CapabilityGraph in omniverse-usd-profiles (2026-04-08, DONE)
+- 8 commits on `feature/capability-graph` branch (local, needs GitLab MR)
+- `CapabilityGraph` class: Python equivalent of C++ CapabilityRegistry
+- Codegen outputs `capabilities.json` (canonical DAG format with `kind` tags)
+- Full SRF pipeline: 37 DAG nodes (6 profiles, 14 features, 16 capabilities)
+- Fixed SRF markdown on jensjebens/simready-foundation `fix/feature-markdown-formatting`
+- Repos: `workspace-profiles/open-usd-profiles/` and `workspace-profiles/asset-validator/`
+
 ## GitHub Project Board
 - "SimReady, USDValidation and USDProfiles" on jensjebens
 - All issues on jensjebens/usd-profiles (not OpenUSD)
