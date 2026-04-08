@@ -203,12 +203,45 @@ usdprofilecheck --profile com.nvidia.simready.prop_robotics_neutral asset.usd
   - Entrypoint package scaffolding (pyproject.toml, __init__.py, registrant class)
 - SRF CI runs codegen → publishes pip-installable packages
 
-### Phase D: Convergence
+### Phase D: Convergence — Exit Strategy
 
-- When Kit ships UsdValidation-enabled USD:
-  - `omniverse-usd-profiles` runtime auto-detects UsdValidation availability
-  - Falls back to OAV if not available
-  - Same user experience, same packages
+When Kit ships a USD with both `UsdValidation` (incl. Python checker support)
+and a native profiles/capability library:
+
+**`omniverse-usd-profiles` narrows back to codegen-only:**
+- The runtime DAG library is superseded by USD's native `CapabilityRegistry`
+- The query API may survive as a lightweight CI/scripting tool for environments
+  that don't link against USD C++, but it's no longer the primary path
+- The codegen pipeline remains: SimReady markdown → `plugInfo.json` (Pixar format)
+  that feeds directly into USD's native plugin system
+- Entrypoint packages shift from publishing `capabilities.json` for Python
+  consumption to publishing `plugInfo.json` for the Plug registry (or both,
+  for backward compat during transition)
+
+**OAV becomes a thin Kit UI shell:**
+- The "temporary" adapter bridge (already in OAV's codebase) becomes the
+  permanent architecture — OAV delegates to `UsdValidation` for execution
+  and provides Kit-specific UI: viewport panel, progress bars, interactive
+  validation, scoring/badges
+- OAV-specific rules that aren't in Pixar's validator set remain as OAV
+  entrypoint packages, but they register into `UsdValidation` via the adapter
+  rather than running in their own framework
+
+**What dissolves:**
+- The Python `CapabilityGraph` runtime → replaced by C++ `CapabilityRegistry`
+- The OAV adapter layer → replaced by OAV's existing C++→Python bridge, inverted
+- The dual-engine detection logic → single engine (UsdValidation)
+
+**What survives:**
+- `omniverse-usd-profiles` codegen (SimReady markdown → Pixar formats)
+- Entrypoint packages as a distribution mechanism for vendor validation rules
+- `capabilities.json` schema as a portable interchange format (CI, docs, tooling)
+- The `kind` semantic tags and DAG model — absorbed into the Pixar proposal
+
+This is the best outcome: we build the interim infrastructure that proves the
+concept for Kit 109+ users today, and when USD ships native support, our runtime
+layers gracefully dissolve while the codegen and spec formats feed into the
+native system.
 
 ## Open Questions
 
@@ -219,5 +252,5 @@ usdprofilecheck --profile com.nvidia.simready.prop_robotics_neutral asset.usd
    or do we maintain both during transition?
 3. Version pinning: should `capabilities.json` declare which USD version's validators
    it references (for forward compatibility)?
-4. Should `omniverse-usd-profiles` be renamed to reflect its expanded role,
-   or is the name still appropriate?
+4. Should `omniverse-usd-profiles` be renamed to reflect its expanded role
+   during Phases A-C, or keep the name since it narrows back in Phase D?
