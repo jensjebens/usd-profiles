@@ -75,12 +75,22 @@ The projects form complementary layers, not competitors:
 - Forked: jensjebens/simready-foundation
 
 ## Phase A — CapabilityGraph in omniverse-usd-profiles (2026-04-08, DONE)
-- 8 commits on `feature/capability-graph` branch (local, needs GitLab MR)
+- 10 commits on `feature/capability-graph` branch (local, needs GitLab MR)
 - `CapabilityGraph` class: Python equivalent of C++ CapabilityRegistry
 - Codegen outputs `capabilities.json` (canonical DAG format with `kind` tags)
-- Full SRF pipeline: 37 DAG nodes (6 profiles, 14 features, 16 capabilities)
-- Fixed SRF markdown on jensjebens/simready-foundation `fix/feature-markdown-formatting`
+- Extracts Internal IDs from feature markdown for variant-specific DAG nodes
+- Full SRF pipeline: 59 DAG nodes (6 profiles, 36 features, 16 capabilities)
 - Repos: `workspace-profiles/open-usd-profiles/` and `workspace-profiles/asset-validator/`
+
+## Phase B — simready-validators OAV adapter (2026-04-08, DONE)
+- `workspace-profiles/simready-validators/` — new pip-installable package
+- Adapter bridges CapabilityGraph → OAV protocol objects
+- All 6 SimReady profiles load into OAV with full feature→requirement chains
+- No OAV core changes needed
+
+## SimReady Foundation fork
+- jensjebens/simready-foundation — forked from NVIDIA/simready-foundation
+- Branch `fix/feature-markdown-formatting`: FET_004 colon, FET_005 duplicate, FET004_ROBOT_PHYSX variant
 
 ## GitHub Project Board
 - "SimReady, USDValidation and USDProfiles" on jensjebens
