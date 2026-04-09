@@ -1,4 +1,8 @@
-# Namespace Ownership: OAV and SimReady Requirement Codes
+# Namespace Ownership: OAV and SimReady Requirement Codes (v1 — SUPERSEDED)
+
+> **⚠️ Superseded by `namespace-ownership-mapping-v2.md`**
+> v1 over-assigned geometry/materials/hierarchy codes to OAV. v2 applies a stricter
+> "upstream candidate" lens — see v2 for the current mapping.
 
 **Date:** 2026-04-09
 **Ref:** jensjebens/usd-profiles#23

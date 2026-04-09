@@ -70,6 +70,36 @@ com.nvidia.simready.features.minimal_neutral
   └── com.nvidia.usd.geom
 ```
 
+## Short Name Resolution Convention
+
+Rules, Features, and Profiles are namespaced by their owning package. Within a package, **short names** (e.g., `geom.014`) are used in spec files and are implicitly scoped to that package's namespace (e.g., `com.nvidia.usd.geom.014`).
+
+**Same-package references** — the short name suffices:
+```yaml
+# Inside simready-core feature spec
+requirements:
+  - geom.001          # resolves to com.nvidia.simready.geom.001
+  - hierarchy.002     # resolves to com.nvidia.simready.hierarchy.002
+```
+
+**Cross-package references** — the fully-qualified namespaced form is required:
+```yaml
+# Inside simready-core feature spec, referencing OAV rules
+requirements:
+  - com.nvidia.usd.geom.014       # cross-package → must be fully qualified
+  - com.nvidia.usd.physics.rb.003  # cross-package → must be fully qualified
+  - hierarchy.002                   # same package → short name OK
+```
+
+**Resolution rules:**
+1. Short names resolve to the enclosing package **only**. There is no search path or fallback.
+2. If a short name doesn't match any rule in the enclosing package, codegen **errors** (not warns).
+3. Cross-package collisions are irrelevant — cross-package refs must be fully qualified, so ambiguity cannot arise.
+4. Short names are **authoring sugar in spec files only**. The codegen (`omniverse-usd-profiles`) expands all short names to fully-qualified form during generation.
+5. All generated artifacts (`capabilities.json`, `plugInfo.json`, ProfileAPI stamps, Python enums) use **fully-qualified names exclusively**. The runtime never performs name resolution.
+
+This keeps spec authoring ergonomic while ensuring the runtime DAG is unambiguous.
+
 ## What Changes
 
 ### 1. Codegen mapping table
@@ -79,6 +109,8 @@ Add a mapping in `omniverse-usd-profiles` that:
 - Normalizes all DAG node IDs to lowercase dot-separated
 - Normalizes feature variant IDs from `FET001_BASE_NEUTRAL` to `minimal_neutral`
 - Normalizes profile IDs from `Prop-Robotics-Neutral` to `prop_robotics_neutral`
+- **Expands short names to fully-qualified form** per the Short Name Resolution Convention above (short names in spec files → fully-qualified in all outputs)
+- **Errors on unresolvable short names** — if a short name doesn't match a rule in the enclosing package, codegen fails with a clear diagnostic
 
 ### 2. Renumber requirement codes
 
