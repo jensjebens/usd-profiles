@@ -1,175 +1,126 @@
-# Namespace Ownership: Full Requirement Code → Owner Mapping
+# Namespace Ownership: OAV and SimReady Requirement Codes
 
-**Date:** 2026-04-09 (updated with Jens's feedback)
+**Date:** 2026-04-09
 **Ref:** jensjebens/usd-profiles#23
+
+## Background
+
+The Omniverse Asset Validator (OAV) and SimReady Foundation (SRF) both define validation requirements for OpenUSD assets. Currently, all requirement codes (e.g. `VG.014`, `HI.001`, `RB.003`) share a flat namespace with short prefixes that don't indicate which package owns them or what domain they belong to.
+
+This document proposes a clear namespace split between OAV and SRF requirements.
+
+## Problem
+
+Today, a developer seeing requirement code `VG.024` cannot tell:
+- Is this an OAV check or a SimReady check?
+- Which package provides the checker implementation?
+- Where to find the spec markdown?
+- Will this check eventually become part of upstream USD validation?
+
+Some requirement codes are implemented by **both** OAV and SRF with different checker classes, creating silent registration conflicts.
 
 ## Principle
 
-- **OAV** (`com.nvidia.usd.*` → `usd.*` future): USD schema/grammar compliance — non-opinionated, applies to ANY USD file
-- **SRF** (`com.nvidia.simready.*`): simulation conformance — opinionated conventions for SimReady assets
+**OAV** checks that a USD file is **structurally valid** — correct schemas, resolvable references, valid topology. These are non-opinionated checks that apply to any USD file regardless of its purpose. They are candidates for upstreaming into Pixar's `UsdValidation` framework.
 
-**Rule:** If a requirement checks that USD is *valid*, OAV owns it. If it checks that an asset conforms to a *convention*, SRF owns it.
+**SRF** checks that an asset conforms to **SimReady conventions** — specific metadata values, hierarchy layouts, naming rules, simulation-specific features. These are opinionated requirements that apply only to assets targeting SimReady profiles.
 
-**Namespace decision:** OAV requirements use `com.nvidia.usd.*` (not `com.nvidia.oav.*`) to signal intent for upstream into `usd.*`.
+**Rule:** If removing the check would produce an invalid USD file, OAV owns it. If removing the check would produce a valid USD file that just doesn't meet a convention, SRF owns it.
 
-## Full Mapping (118 requirements)
+## Proposed Namespace Scheme
 
-### com.nvidia.usd.core (7)
+### OAV requirements: `com.nvidia.usd.<domain>.<number>`
 
-| Code | Description | Notes |
-|------|------------|-------|
-| AA.001 | Anchored asset paths | General USD hygiene |
-| AA.002 | Supported file types | General USD hygiene |
-| HI.001 | Single root prim | Valid USD structure |
-| HI.003 | Root prim is Xformable | Valid USD structure |
-| HI.004 | Stage has defaultPrim | Valid USD structure |
-| UN.001 | upAxis is declared | Metadata presence check |
-| UN.002 | metersPerUnit is declared | Metadata presence check |
+OAV requirements use the `com.nvidia.usd` prefix to signal that these checks validate core USD correctness and are candidates for upstream into `usd.*` when Pixar's UsdValidation framework matures.
 
-### com.nvidia.usd.geom (28)
+| Namespace | Count | Examples |
+|-----------|-------|---------|
+| `com.nvidia.usd.core` | 7 | defaultPrim exists, upAxis declared, anchored paths |
+| `com.nvidia.usd.geom` | 28 | mesh topology, manifold, normals, primvar indexing |
+| `com.nvidia.usd.physics` | 14 | rigid body on Xformable, joint targets exist, no nested articulations |
+| `com.nvidia.usd.shade` | 8 | material bindings, UsdPreviewSurface, MDL schema |
+| **Total** | **57** | |
 
-| Code | Description |
-|------|------------|
-| VG.001–VG.024, VG.026–VG.029 | Geometry validity checks |
+### SRF requirements: `com.nvidia.simready.<domain>.<number>`
 
-**Moved to SRF (per review):**
-- `VG.MESH.001` → `com.nvidia.simready.geom` (opinionated: must contain mesh)
-- `VG.RTX.001` → `com.nvidia.simready.geom` (NVIDIA RTX-specific)
-- `VG.025` → `com.nvidia.simready.geom` (opinionated: origin positioning)
+SRF requirements use the `com.nvidia.simready` prefix for simulation-specific conventions.
 
-### com.nvidia.usd.physics (14)
+| Namespace | Count | Examples |
+|-----------|-------|---------|
+| `com.nvidia.simready.hierarchy` | 7 | kinematic chain, logical grouping, placeable/posable |
+| `com.nvidia.simready.geom` | 3 | must contain mesh, origin positioning, RTX extents |
+| `com.nvidia.simready.physics` | 9 | rigid body capability, articulation capability, multi-body |
+| `com.nvidia.simready.units` | 5 | upAxis=Z, metersPerUnit=1.0, kilogramsPerUnit |
+| `com.nvidia.simready.naming_paths` | 8 | prim naming, file naming, directory structure |
+| `com.nvidia.simready.semantic_labels` | 4 | semantic labels required, Q-code validation |
+| `com.nvidia.simready.nonvisual_materials` | 6 | non-visual material conventions |
+| `com.nvidia.simready.driven_joints` | 11 | driven joint conventions |
+| `com.nvidia.simready.base_articulation` | 2 | base articulation rules |
+| `com.nvidia.simready.*` (misc) | 6 | graspable, PhysX colliders, physics materials |
+| **Total** | **61** | |
 
-Only codes that match Pixar's UsdPhysicsValidators scope (schema compliance):
+### Requirement code format
 
-| Code | Description | Pixar equivalent |
-|------|------------|-----------------|
-| JT.002 | Joint body target exists | JointInvalidPrimRel |
-| JT.003 | Joint no multiple targets | JointMultiplePrimsRel |
-| JT.ART.002 | No nested articulation | NestedArticulation |
-| JT.ART.004 | Articulation not on static body | ArticulationOnStaticBody |
-| RB.003 | Rigid body on Xformable | RigidBodyNonXformable |
-| RB.005 | Rigid body no instancing | RigidBodyNonInstanceable |
-| RB.006 | Rigid body collision API | — |
-| RB.007 | Rigid body mass | MassInvalidValues |
-| RB.009 | Rigid body no skew | RigidBodyOrientationScale |
-| RB.COL.001 | Collision API applied | — |
-| RB.COL.002 | Collision mesh check | — |
-| RB.COL.003 | Collision mesh quality | — |
-| RB.COL.004 | Collision uniform scale | ColliderNonUniformScale |
+Current codes like `VG.014` become fully namespaced:
 
-**Moved to SRF (not in Pixar's scope):**
-- `JT.001` → `com.nvidia.simready.physics` (joint capability — opinionated)
-- `JT.ART.001` → `com.nvidia.simready.physics` (articulation capability — opinionated)
-- `JT.ART.003` → `com.nvidia.simready.physics` (articulation pose — not in Pixar)
-- `RB.001` → `com.nvidia.simready.physics` (rigid body capability — opinionated)
-- `RB.008` → `com.nvidia.simready.physics` (rigid body static — not in Pixar)
-- `RB.010` → `com.nvidia.simready.physics` (not in Pixar)
-- `RB.011` → `com.nvidia.simready.physics` (not in Pixar)
-- `RB.012` → `com.nvidia.simready.physics` (not in Pixar)
+```
+# Current (ambiguous)
+VG.014
+HI.001
+RB.003
 
-### com.nvidia.usd.shade (8)
+# Proposed (self-describing)
+com.nvidia.usd.geom.014         ← OAV: mesh topology valid
+com.nvidia.usd.core.hi.001      ← OAV: single root prim
+com.nvidia.usd.physics.rb.003   ← OAV: rigid body on Xformable
 
-| Code | Description |
-|------|------------|
-| VM.BIND.001, VM.BIND.002 | Material binding validity |
-| VM.MAT.001 | Material existence |
-| VM.MDL.001, VM.MDL.002 | MDL schema compliance |
-| VM.PS.001 | UsdPreviewSurface compliance |
-| VM.TEX.001, VM.TEX.002 | Texture validity |
+com.nvidia.simready.geom.001    ← SRF: must contain mesh (was VG.MESH.001)
+com.nvidia.simready.units.006   ← SRF: upAxis = Z (was UN.006)
+com.nvidia.simready.hierarchy.002  ← SRF: exclusive XForm parent (was HI.002)
+```
 
-### com.nvidia.simready.hierarchy (7)
+## Capability DAG Integration
 
-| Code | Description |
-|------|------------|
-| HI.002 | Exclusive XForm parent |
-| HI.005 | SimReady hierarchy structure |
-| HI.006 | Placeable/posable xformable |
-| HI.007 | SimReady hierarchy rules |
-| HI.008 | Logical geometry grouping |
-| HI.009 | Kinematic chain hierarchy |
-| HI.010 | Undefined prims check |
+SRF features inherit OAV's base checks via DAG predecessors. This means a SimReady profile automatically includes USD hygiene validation without listing every OAV requirement explicitly.
 
-### com.nvidia.simready.geom (3) — moved from OAV
+```
+com.nvidia.simready.features.minimal_neutral
+  ├── com.nvidia.simready.capabilities.hierarchy
+  ├── com.nvidia.simready.capabilities.units
+  ├── com.nvidia.usd.core        ← OAV: defaultPrim, upAxis, metersPerUnit
+  └── com.nvidia.usd.geom        ← OAV: topology, normals, manifold
+```
 
-| Code | Description | Reason |
-|------|------------|--------|
-| VG.MESH.001 | Must contain mesh | Opinionated — volumes, curves, points are valid USD |
-| VG.RTX.001 | RTX extreme extents | NVIDIA RTX-specific |
-| VG.025 | Asset origin positioning | Opinionated convention |
+When Pixar ships native `usd.geom` validators, `com.nvidia.usd.geom` becomes a thin wrapper that delegates to `usd.geom`, and eventually dissolves entirely.
 
-### com.nvidia.simready.physics (9) — moved from OAV
+## Current Duplicates (9 codes)
 
-| Code | Description | Reason |
-|------|------------|--------|
-| JT.001 | Joint capability | Opinionated — not all assets need joints |
-| JT.ART.001 | Articulation capability | Opinionated |
-| JT.ART.003 | Articulation pose | Not in Pixar's scope |
-| RB.001 | Rigid body capability | Opinionated — not all assets need physics |
-| RB.008 | Rigid body static | Not in Pixar's scope |
-| RB.010 | Rigid body check | Not in Pixar's scope |
-| RB.011 | Rigid body check | Not in Pixar's scope |
-| RB.012 | Rigid body check | Not in Pixar's scope |
-| RB.MB.001 | Multi-body convention | SimReady-specific |
+These requirement codes currently have checker implementations in **both** OAV and SRF:
 
-### com.nvidia.simready.naming_paths (8)
+| Code | OAV Checker | SRF Checker | Proposed Owner |
+|------|------------|-------------|----------------|
+| AA.001 | AnchoredAssetPathsChecker | AnchoredAssetPathsChecker | OAV (general USD) |
+| AA.002 | SupportedFileTypesChecker | SupportedFileTypesChecker | OAV (general USD) |
+| HI.001 | HierarchyHasRootChecker | HierarchyHasRootChecker | OAV (valid structure) |
+| HI.003 | RootPrimXformableChecker | RootPrimXformableChecker | OAV (valid structure) |
+| HI.004 | DefaultPrimChecker | StageHasDefaultPrimChecker | OAV (valid structure) |
+| UN.001 | StageMetadataChecker | StageMetadataChecker | OAV (metadata presence) |
+| UN.002 | StageMetadataChecker | StageMetadataChecker | OAV (metadata presence) |
+| UN.006 | UpAxisZChecker | UpAxisZChecker | SRF (opinionated value) |
+| UN.007 | UnitsInMetersChecker | MetersPerUnit1Checker | SRF (opinionated value) |
 
-| Code | Description |
-|------|------------|
-| NP.001–NP.008 | All naming/path conventions |
+**Resolution:** Remove the duplicate checker from the non-owning package. The remaining checker keeps the namespaced code.
 
-### com.nvidia.simready.units (5)
+## Classification Method
 
-| Code | Description |
-|------|------------|
-| UN.003 | kilogramsPerUnit |
-| UN.004 | Corrective transforms |
-| UN.005 | timeCodesPerSecond |
-| UN.006 | upAxis = Z (opinionated value) |
-| UN.007 | metersPerUnit = 1.0 (opinionated value) |
+For physics requirements, we cross-referenced against Pixar's `UsdPhysicsValidators` (in the OpenUSD `dev` branch) to determine which checks Pixar considers general schema compliance:
 
-### com.nvidia.simready.semantic_labels (4)
+- Pixar validates: nested articulations, rigid body Xformable/instancing/scale, joint targets, collider scale, mass values
+- Pixar does NOT validate: rigid body capability, articulation capability, articulation pose, specific rigid body configurations
 
-| Code | Description |
-|------|------------|
-| SL.001, SL.003, SL.NV.002, SL.QCODE.001 | All semantic labels |
+Codes matching Pixar's scope → `com.nvidia.usd.physics`
+Codes outside Pixar's scope → `com.nvidia.simready.physics`
 
-### com.nvidia.simready.nonvisual_materials (6)
+## Full Mapping Table
 
-| Code | Description |
-|------|------------|
-| NVM.001–NVM.006 | All non-visual materials |
-
-### com.nvidia.simready.driven_joints (11)
-
-| Code | Description |
-|------|------------|
-| DJ.001–DJ.011 | All driven joint conventions |
-
-### com.nvidia.simready.base_articulation (2)
-
-| Code | Description |
-|------|------------|
-| BA.001, BA.002 | Base articulation rules |
-
-### com.nvidia.simready.* (misc) (6)
-
-| Code | Namespace | Description |
-|------|-----------|------------|
-| AA.OV.001 | simready.core | USDZ UDIM limitation (Kit-specific) |
-| COL.001 | simready.colliders | Collider convention |
-| GSP.001 | simready.graspable | Graspable physics |
-| PHYSX.COL.001-002 | simready.physx | PhysX-specific colliders |
-| PMT.001 | simready.physics_materials | Physics materials convention |
-| SR.001 | simready.sim_ready | SimReady capability check |
-
-## Revised Summary
-
-| Namespace | Count | Description |
-|-----------|-------|-------------|
-| `com.nvidia.usd.core` | 7 | Basic USD validity |
-| `com.nvidia.usd.geom` | 28 | Geometry validity |
-| `com.nvidia.usd.physics` | 14 | Physics schema validity (Pixar-aligned) |
-| `com.nvidia.usd.shade` | 8 | Material/shader validity |
-| **USD subtotal** | **57** | → `usd.*` future |
-| `com.nvidia.simready.*` | **61** | Simulation conformance |
-| **Total** | **118** | |
+See `research/namespace-ownership-mapping.md` for the complete 118-code mapping.
