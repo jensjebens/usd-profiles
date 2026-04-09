@@ -1,18 +1,20 @@
 # Namespace Ownership: Full Requirement Code → Owner Mapping
 
-**Date:** 2026-04-09
+**Date:** 2026-04-09 (updated with Jens's feedback)
 **Ref:** jensjebens/usd-profiles#23
 
 ## Principle
 
-- **OAV** (`com.nvidia.oav.*` → `usd.*` future): USD schema/grammar compliance — non-opinionated, applies to ANY USD file
+- **OAV** (`com.nvidia.usd.*` → `usd.*` future): USD schema/grammar compliance — non-opinionated, applies to ANY USD file
 - **SRF** (`com.nvidia.simready.*`): simulation conformance — opinionated conventions for SimReady assets
 
 **Rule:** If a requirement checks that USD is *valid*, OAV owns it. If it checks that an asset conforms to a *convention*, SRF owns it.
 
+**Namespace decision:** OAV requirements use `com.nvidia.usd.*` (not `com.nvidia.oav.*`) to signal intent for upstream into `usd.*`.
+
 ## Full Mapping (118 requirements)
 
-### com.nvidia.oav.core (7)
+### com.nvidia.usd.core (7)
 
 | Code | Description | Notes |
 |------|------------|-------|
@@ -24,30 +26,48 @@
 | UN.001 | upAxis is declared | Metadata presence check |
 | UN.002 | metersPerUnit is declared | Metadata presence check |
 
-### com.nvidia.oav.geom (31)
+### com.nvidia.usd.geom (28)
 
 | Code | Description |
 |------|------------|
-| VG.001–VG.029, VG.MESH.001, VG.RTX.001 | All geometry validity checks |
+| VG.001–VG.024, VG.026–VG.029 | Geometry validity checks |
 
-⚠️ **Review needed:**
-- `VG.MESH.001` (must contain mesh) — is this general or SimReady-opinionated?
-- `VG.RTX.001` (RTX extreme extent limits) — is this general or NVIDIA-specific?
-- `VG.025` (asset origin positioning) — could be SimReady convention?
+**Moved to SRF (per review):**
+- `VG.MESH.001` → `com.nvidia.simready.geom` (opinionated: must contain mesh)
+- `VG.RTX.001` → `com.nvidia.simready.geom` (NVIDIA RTX-specific)
+- `VG.025` → `com.nvidia.simready.geom` (opinionated: origin positioning)
 
-### com.nvidia.oav.physics (21)
+### com.nvidia.usd.physics (14)
 
-| Code | Description |
-|------|------------|
-| JT.001–JT.003, JT.ART.001–JT.ART.004 | Joint/articulation schema validity |
-| RB.001, RB.003, RB.005–RB.012 | Rigid body schema validity |
-| RB.COL.001–RB.COL.004 | Collision API schema validity |
+Only codes that match Pixar's UsdPhysicsValidators scope (schema compliance):
 
-⚠️ **Review needed:**
-- `JT.ART.001` (articulation capability) and `JT.ART.003` — are these general physics schema checks or SimReady-specific?
-- `RB.001` (rigid body capability), `RB.008` (rigid body static), `RB.010–RB.012` — general or SimReady?
+| Code | Description | Pixar equivalent |
+|------|------------|-----------------|
+| JT.002 | Joint body target exists | JointInvalidPrimRel |
+| JT.003 | Joint no multiple targets | JointMultiplePrimsRel |
+| JT.ART.002 | No nested articulation | NestedArticulation |
+| JT.ART.004 | Articulation not on static body | ArticulationOnStaticBody |
+| RB.003 | Rigid body on Xformable | RigidBodyNonXformable |
+| RB.005 | Rigid body no instancing | RigidBodyNonInstanceable |
+| RB.006 | Rigid body collision API | — |
+| RB.007 | Rigid body mass | MassInvalidValues |
+| RB.009 | Rigid body no skew | RigidBodyOrientationScale |
+| RB.COL.001 | Collision API applied | — |
+| RB.COL.002 | Collision mesh check | — |
+| RB.COL.003 | Collision mesh quality | — |
+| RB.COL.004 | Collision uniform scale | ColliderNonUniformScale |
 
-### com.nvidia.oav.shade (8)
+**Moved to SRF (not in Pixar's scope):**
+- `JT.001` → `com.nvidia.simready.physics` (joint capability — opinionated)
+- `JT.ART.001` → `com.nvidia.simready.physics` (articulation capability — opinionated)
+- `JT.ART.003` → `com.nvidia.simready.physics` (articulation pose — not in Pixar)
+- `RB.001` → `com.nvidia.simready.physics` (rigid body capability — opinionated)
+- `RB.008` → `com.nvidia.simready.physics` (rigid body static — not in Pixar)
+- `RB.010` → `com.nvidia.simready.physics` (not in Pixar)
+- `RB.011` → `com.nvidia.simready.physics` (not in Pixar)
+- `RB.012` → `com.nvidia.simready.physics` (not in Pixar)
+
+### com.nvidia.usd.shade (8)
 
 | Code | Description |
 |------|------------|
@@ -61,53 +81,75 @@
 
 | Code | Description |
 |------|------------|
-| HI.002 | Exclusive XForm parent | SimReady layout |
-| HI.005 | SimReady hierarchy structure | |
-| HI.006 | Placeable/posable xformable | SimReady convention |
-| HI.007 | SimReady hierarchy rules | |
-| HI.008 | Logical geometry grouping | SimReady convention |
-| HI.009 | Kinematic chain hierarchy | SimReady convention |
-| HI.010 | Undefined prims check | SimReady convention |
+| HI.002 | Exclusive XForm parent |
+| HI.005 | SimReady hierarchy structure |
+| HI.006 | Placeable/posable xformable |
+| HI.007 | SimReady hierarchy rules |
+| HI.008 | Logical geometry grouping |
+| HI.009 | Kinematic chain hierarchy |
+| HI.010 | Undefined prims check |
+
+### com.nvidia.simready.geom (3) — moved from OAV
+
+| Code | Description | Reason |
+|------|------------|--------|
+| VG.MESH.001 | Must contain mesh | Opinionated — volumes, curves, points are valid USD |
+| VG.RTX.001 | RTX extreme extents | NVIDIA RTX-specific |
+| VG.025 | Asset origin positioning | Opinionated convention |
+
+### com.nvidia.simready.physics (9) — moved from OAV
+
+| Code | Description | Reason |
+|------|------------|--------|
+| JT.001 | Joint capability | Opinionated — not all assets need joints |
+| JT.ART.001 | Articulation capability | Opinionated |
+| JT.ART.003 | Articulation pose | Not in Pixar's scope |
+| RB.001 | Rigid body capability | Opinionated — not all assets need physics |
+| RB.008 | Rigid body static | Not in Pixar's scope |
+| RB.010 | Rigid body check | Not in Pixar's scope |
+| RB.011 | Rigid body check | Not in Pixar's scope |
+| RB.012 | Rigid body check | Not in Pixar's scope |
+| RB.MB.001 | Multi-body convention | SimReady-specific |
 
 ### com.nvidia.simready.naming_paths (8)
 
 | Code | Description |
 |------|------------|
-| NP.001–NP.008 | All naming/path conventions | SimReady-specific |
+| NP.001–NP.008 | All naming/path conventions |
 
 ### com.nvidia.simready.units (5)
 
 | Code | Description |
 |------|------------|
-| UN.003 | kilogramsPerUnit | SimReady value |
-| UN.004 | Corrective transforms | SimReady convention |
-| UN.005 | timeCodesPerSecond | SimReady value |
-| UN.006 | upAxis = Z | Opinionated (not just "declared") |
-| UN.007 | metersPerUnit = 1.0 | Opinionated (not just "declared") |
+| UN.003 | kilogramsPerUnit |
+| UN.004 | Corrective transforms |
+| UN.005 | timeCodesPerSecond |
+| UN.006 | upAxis = Z (opinionated value) |
+| UN.007 | metersPerUnit = 1.0 (opinionated value) |
 
 ### com.nvidia.simready.semantic_labels (4)
 
 | Code | Description |
 |------|------------|
-| SL.001, SL.003, SL.NV.002, SL.QCODE.001 | All semantic labels | SimReady-specific |
+| SL.001, SL.003, SL.NV.002, SL.QCODE.001 | All semantic labels |
 
 ### com.nvidia.simready.nonvisual_materials (6)
 
 | Code | Description |
 |------|------------|
-| NVM.001–NVM.006 | All non-visual materials | SimReady-specific |
+| NVM.001–NVM.006 | All non-visual materials |
 
 ### com.nvidia.simready.driven_joints (11)
 
 | Code | Description |
 |------|------------|
-| DJ.001–DJ.011 | All driven joint conventions | SimReady-specific |
+| DJ.001–DJ.011 | All driven joint conventions |
 
 ### com.nvidia.simready.base_articulation (2)
 
 | Code | Description |
 |------|------------|
-| BA.001, BA.002 | Base articulation rules | SimReady-specific |
+| BA.001, BA.002 | Base articulation rules |
 
 ### com.nvidia.simready.* (misc) (6)
 
@@ -118,31 +160,16 @@
 | GSP.001 | simready.graspable | Graspable physics |
 | PHYSX.COL.001-002 | simready.physx | PhysX-specific colliders |
 | PMT.001 | simready.physics_materials | Physics materials convention |
-| RB.MB.001 | simready.physics | Multi-body convention |
 | SR.001 | simready.sim_ready | SimReady capability check |
 
-## Summary
+## Revised Summary
 
 | Namespace | Count | Description |
 |-----------|-------|-------------|
-| `com.nvidia.oav.core` | 7 | Basic USD validity |
-| `com.nvidia.oav.geom` | 31 | Geometry validity |
-| `com.nvidia.oav.physics` | 21 | Physics schema validity |
-| `com.nvidia.oav.shade` | 8 | Material/shader validity |
-| **OAV subtotal** | **67** | |
-| `com.nvidia.simready.*` | 51 | Simulation conformance |
+| `com.nvidia.usd.core` | 7 | Basic USD validity |
+| `com.nvidia.usd.geom` | 28 | Geometry validity |
+| `com.nvidia.usd.physics` | 14 | Physics schema validity (Pixar-aligned) |
+| `com.nvidia.usd.shade` | 8 | Material/shader validity |
+| **USD subtotal** | **57** | → `usd.*` future |
+| `com.nvidia.simready.*` | **61** | Simulation conformance |
 | **Total** | **118** | |
-
-## Open Questions for Review
-
-1. **VG.MESH.001** (must contain mesh) — Is "assets must have mesh geometry" a general USD check or a SimReady convention? Non-mesh USD files (volumes, curves, points) are perfectly valid.
-
-2. **VG.RTX.001** (RTX extreme extents) — This is NVIDIA RTX-specific. Should it be `com.nvidia.oav.geom` or `com.nvidia.simready.geom`?
-
-3. **VG.025** (asset origin positioning) — "Origin should be at a specific location" feels opinionated/SimReady rather than general USD validity.
-
-4. **JT.ART.001, JT.ART.003** — Are articulation capability and articulation pose checks general USD physics or SimReady-specific?
-
-5. **RB.001, RB.008, RB.010-RB.012** — Some rigid body checks may be SimReady-specific (e.g. "rigid body capability" vs "rigid body schema validity"). Need per-code review.
-
-6. **Should `com.nvidia.oav` be just `oav`?** The `com.nvidia` prefix implies vendor ownership, but OAV checks are meant to be general USD hygiene. Maybe just `oav.geom`, `oav.physics`, etc.?
