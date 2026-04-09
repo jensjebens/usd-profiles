@@ -4,6 +4,46 @@
 **Ref:** jensjebens/usd-profiles#23
 **Depends on:** `research/namespace-ownership-mapping.md`
 
+## Current State (inconsistent)
+
+The codegen currently produces IDs from different sources with different conventions:
+
+```
+com.nvidia.simready                          ← namespace (codegen hardcoded)
+com.nvidia.simready.geometry                 ← capability (from markdown filename)
+com.nvidia.simready.FET001_BASE_NEUTRAL      ← feature variant (from markdown Internal ID, SCREAMING_SNAKE)
+com.nvidia.simready.Prop-Robotics-Neutral    ← profile (from TOML table name, Title-Case-Hyphens)
+com.nvidia.simready.fet_001_minimal          ← feature (from markdown filename, lowercase_snake)
+```
+
+Five different naming conventions in one DAG. This happens because:
+1. Capability IDs come from markdown directory names (lowercase_snake)
+2. Feature variant IDs come from Internal ID fields (SCREAMING_SNAKE)
+3. Feature file IDs come from markdown filenames (lowercase_snake)
+4. Profile IDs come from TOML table headers (Title-Case-Hyphens)
+5. The `com.nvidia.simready.` prefix is hardcoded in codegen
+
+## Target State (consistent)
+
+All IDs should follow a consistent convention:
+
+```
+com.nvidia.usd                               ← root namespace
+com.nvidia.usd.core                          ← OAV core capability
+com.nvidia.usd.geom                          ← OAV geometry capability
+com.nvidia.usd.physics                       ← OAV physics capability
+com.nvidia.usd.shade                         ← OAV materials capability
+
+com.nvidia.simready                          ← root namespace
+com.nvidia.simready.capabilities.hierarchy   ← SRF capability
+com.nvidia.simready.capabilities.geom        ← SRF geometry (opinionated)
+com.nvidia.simready.features.minimal_neutral ← SRF feature (FET001)
+com.nvidia.simready.features.rigid_body_physics_neutral  ← SRF feature (FET003)
+com.nvidia.simready.profiles.prop_robotics_neutral       ← SRF profile
+```
+
+Convention: lowercase, dot-separated, descriptive names. No SCREAMING_SNAKE, no Title-Case-Hyphens.
+
 ## Scope
 
 Apply the `com.nvidia.usd.*` / `com.nvidia.simready.*` namespace split across all repos and codegen outputs.
