@@ -100,3 +100,42 @@ The projects form complementary layers, not competitors:
 ## Shared Skills
 - `usd-asset-validator` skill already exists with omniverse-asset-validator docs
 - `dev-methodology` — plan→review→test→implement→demonstrate
+
+## Namespace Ownership Mapping v2 (2026-04-09)
+- v1 over-assigned to `com.nvidia.usd.*` (57 codes) — too many geometry/materials/hierarchy codes in OAV
+- v2 applies "would Pixar accept this upstream?" lens, cross-ref'd against 25 actual Pixar UsdValidation validators on `dev` branch (26.05)
+- Result: **33 OAV upstream candidates, 85 SimReady conventions**
+- Big shifts: geometry 28→13, materials 8→2, physics 14→9
+- Pixar's usdGeomValidators has only 4 validators: StageMetadata, SubsetFamilies, SubsetParentIsImageable, Encapsulation
+- Doc: `research/namespace-ownership-mapping-v2.md`
+- #23 marked `status:blocked` (needs stakeholder alignment)
+- Short Name Resolution Convention added to `plans/namespace-conformance-implementation.md`
+
+## capabilities.json v2 — Single Artifact (2026-04-09, DONE)
+- **Problem:** codegen produced two parallel outputs: capabilities.json (DAG-only) + generated Python enums (~3,707 lines) with rich metadata
+- **Solution:** enrich capabilities.json with full requirement metadata (display_name, message, version, tags, params, examples) per node
+- Eliminates need for generated Python enums — single JSON is the complete source of truth
+- Mirrors Pixar's `plugInfo.json` pattern: declarative JSON → registry → validators
+- No schema version checking — clean break, v1 never existed in production
+- **Branches:**
+  - `open-usd-profiles` → `feature/capabilities-json-v2` (local, needs push to GitLab)
+    - `RequirementInfo` frozen dataclass satisfying OAV Requirement protocol
+    - `CapabilityNode.requirements` dict, query methods: `get_requirement()`, `get_requirements()`, `get_all_requirements()`
+    - 44 tests pass (14 new v2 tests + 30 existing)
+  - `asset-validator` → `feature/capabilities-json-v2` (local, needs push to GitLab)
+    - `register_requirements()` now accepts string codes, resolves from cached `CapabilityGraph`
+    - `_units_rules.py` converted as demo: `@register_requirements("UN.006")` — no enum import
+    - Remaining 39 decorators still use enums (mechanical migration)
+  - `jensjebens/simready-foundation` → `feature/capabilities-json-v2` (**pushed to GitHub**)
+    - `packages/simready-validators/` — pip-installable package with v2 JSON
+    - 59 nodes, 301 requirements, 201KB
+    - Regenerated from SRF specs in same repo
+- Issue: jensjebens/usd-profiles#28
+- AA.003 is OAV-only (not in SRF specs) — 12 OAV-only codes exist, need handling when full migration happens
+- #25 (Codegen CLI) closed as wontfix — existing CLI already produces all formats
+
+## Issue Tracker Status (2026-04-09)
+- #23 namespace conformance: `status:blocked` (stakeholder alignment needed)
+- #24 detect/stamp/metadata OAV port: assigned to someone else
+- #25 codegen CLI: closed (wontfix)
+- #28 capabilities.json v2: branches ready for Miguel's review
