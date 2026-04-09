@@ -124,3 +124,24 @@ Codes outside Pixar's scope → `com.nvidia.simready.physics`
 ## Full Mapping Table
 
 See `research/namespace-ownership-mapping.md` for the complete 118-code mapping.
+
+## Full Duplication Analysis
+
+The 9 "duplicated checkers" mentioned earlier was misleading — that counted only codes where both packages have a **checker class**. The real overlap is in **spec definitions**:
+
+| Category | Count | Description |
+|----------|-------|-------------|
+| **Both define spec** | 78 | Same requirement code in both `omni.capabilities` and `simready_validators.capabilities` |
+| **OAV spec only** | 12 | Defined in `omni.capabilities` but not in SRF specs |
+| **SRF spec only** | 40 | Defined in SRF specs but not in `omni.capabilities` |
+
+### Resolution
+
+Each of the 78 duplicated specs needs exactly one home:
+- Codes assigned to `com.nvidia.usd.*` → spec lives in OAV's generated package
+- Codes assigned to `com.nvidia.simready.*` → spec lives in SRF's generated package
+- The non-owning package removes its copy
+
+The 12 OAV-only codes (AA.003, DC.001, DC.002, HI.011-012, VG.030-034, VG.RTX.002, VM.D.001) stay in OAV — SRF doesn't define them.
+
+The 40 SRF-only codes (BA.*, DJ.*, NP.*, PHYSX.*, etc.) stay in SRF — OAV doesn't define them.
