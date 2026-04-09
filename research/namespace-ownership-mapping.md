@@ -1,87 +1,148 @@
-# Namespace Ownership: Requirement Code → Owner Mapping
+# Namespace Ownership: Full Requirement Code → Owner Mapping
 
 **Date:** 2026-04-09
 **Ref:** jensjebens/usd-profiles#23
 
 ## Principle
 
-- **OAV** (`com.nvidia.oav.*` → `usd.*` future): USD schema/grammar compliance — non-opinionated
-- **SRF** (`com.nvidia.simready.*`): simulation conformance — opinionated conventions
+- **OAV** (`com.nvidia.oav.*` → `usd.*` future): USD schema/grammar compliance — non-opinionated, applies to ANY USD file
+- **SRF** (`com.nvidia.simready.*`): simulation conformance — opinionated conventions for SimReady assets
 
-## Mapping
+**Rule:** If a requirement checks that USD is *valid*, OAV owns it. If it checks that an asset conforms to a *convention*, SRF owns it.
 
-### OAV-only (general USD checks, no SRF equivalent)
+## Full Mapping (118 requirements)
 
-These stay in OAV, namespace `com.nvidia.oav.*`:
+### com.nvidia.oav.core (7)
 
-| Code | Checker | Domain | Future |
-|------|---------|--------|--------|
-| AA.003 | PortableAssetPathChecker | atomic_asset | usd.utils |
-| AA.OV.001 | UsdzUdimLimitationChecker | atomic_asset | usd.utils |
-| JT.002 | PhysicsJointChecker | physics | usd.physics |
-| JT.003 | PhysicsJointChecker | physics | usd.physics |
-| JT.ART.002 | ArticulationChecker | physics | usd.physics |
-| JT.ART.004 | ArticulationChecker | physics | usd.physics |
-| RB.003 | RigidBodyChecker | physics | usd.physics |
-| RB.005 | RigidBodyChecker | physics | usd.physics |
-| RB.007 | MassChecker | physics | usd.physics |
-| RB.009 | RigidBodyChecker | physics | usd.physics |
-| RB.COL.004 | ColliderChecker | physics | usd.physics |
-| VG.002 | ExtentsChecker | geometry | usd.geom |
-| VG.007 | ManifoldChecker | geometry | usd.geom |
-| VG.009 | IndexedPrimvarChecker | geometry | usd.geom |
-| VG.010 | SubdivisionSchemeChecker | geometry | usd.geom |
-| VG.011 | UnusedPrimvarChecker | geometry | usd.geom |
-| VG.014 | ValidateTopologyChecker | geometry | usd.geom |
-| VG.016 | WeldChecker | geometry | usd.geom |
-| VG.018 | UnusedMeshTopologyChecker | geometry | usd.geom |
-| VG.019 | ZeroAreaFaceChecker | geometry | usd.geom |
-| VG.020 | PointsPrecisionChecker | geometry | usd.geom |
-| VG.025 | AssetOriginPositioningChecker | geometry | usd.geom |
-| VG.027 | NormalsExistChecker | geometry | usd.geom |
-| VG.028 | NormalsValidChecker | geometry | usd.geom |
-| VG.029 | NormalsWindingsChecker | geometry | usd.geom |
-| VG.MESH.001 | ContainsMeshChecker | geometry | usd.geom |
-| VG.RTX.001 | AlmostExtremeExtentChecker | geometry | usd.geom |
-| VM.BIND.001 | MaterialOutOfScopeChecker | materials | usd.shade |
-| VM.MDL.001 | MaterialPathChecker | materials | usd.shade |
-| VM.MDL.002 | MaterialOldMdlSchemaChecker | materials | usd.shade |
-| VM.PS.001 | MaterialUsdPreviewSurfaceChecker | materials | usd.shade |
+| Code | Description | Notes |
+|------|------------|-------|
+| AA.001 | Anchored asset paths | General USD hygiene |
+| AA.002 | Supported file types | General USD hygiene |
+| HI.001 | Single root prim | Valid USD structure |
+| HI.003 | Root prim is Xformable | Valid USD structure |
+| HI.004 | Stage has defaultPrim | Valid USD structure |
+| UN.001 | upAxis is declared | Metadata presence check |
+| UN.002 | metersPerUnit is declared | Metadata presence check |
 
-### SRF-only (SimReady-specific, no OAV equivalent)
+### com.nvidia.oav.geom (31)
 
-These stay in SRF, namespace `com.nvidia.simready.*`:
+| Code | Description |
+|------|------------|
+| VG.001–VG.029, VG.MESH.001, VG.RTX.001 | All geometry validity checks |
 
-| Code | Checker | Domain |
-|------|---------|--------|
-| HI.002 | ExclusiveXFormParentChecker | hierarchy |
-| HI.006 | PlaceablePosableXformableChecker | hierarchy |
-| HI.008 | LogicalGeometryGroupingChecker | hierarchy |
-| HI.009 | KinematicChainHierarchyChecker | hierarchy |
-| HI.010 | UndefinedPrimsChecker | hierarchy |
-| NP.001-008 | (8 naming/path checkers) | naming_paths |
-| SR.001 | SimReadyCapabilityChecker | sim_ready |
-| UN.003 | KilogramsPerUnitChecker | units |
-| UN.004 | UnitsCorrectiveTransformChecker | units |
-| UN.005 | TimeCodesPerSecondChecker | units |
+⚠️ **Review needed:**
+- `VG.MESH.001` (must contain mesh) — is this general or SimReady-opinionated?
+- `VG.RTX.001` (RTX extreme extent limits) — is this general or NVIDIA-specific?
+- `VG.025` (asset origin positioning) — could be SimReady convention?
 
-### DUPLICATED (both OAV and SRF have checkers — need resolution)
+### com.nvidia.oav.physics (21)
 
-| Code | OAV Checker | SRF Checker | Owner should be |
-|------|------------|-------------|-----------------|
-| AA.001 | AnchoredAssetPathsChecker | AnchoredAssetPathsChecker | **OAV** (general USD hygiene) |
-| AA.002 | SupportedFileTypesChecker | SupportedFileTypesChecker | **OAV** (general USD hygiene) |
-| HI.001 | HierarchyHasRootChecker | HierarchyHasRootChecker | **OAV** (valid USD structure) |
-| HI.003 | RootPrimXformableChecker | RootPrimXformableChecker | **OAV** (valid USD structure) |
-| HI.004 | DefaultPrimChecker | StageHasDefaultPrimChecker | **OAV** (valid USD structure) |
-| UN.001 | StageMetadataChecker | StageMetadataChecker | **OAV** (metadata presence) |
-| UN.002 | StageMetadataChecker | StageMetadataChecker | **OAV** (metadata presence) |
-| UN.006 | UpAxisZChecker | UpAxisZChecker | **SRF** (opinionated value: Z) |
-| UN.007 | UnitsInMetersChecker | MetersPerUnit1Checker | **SRF** (opinionated value: 1.0) |
+| Code | Description |
+|------|------------|
+| JT.001–JT.003, JT.ART.001–JT.ART.004 | Joint/articulation schema validity |
+| RB.001, RB.003, RB.005–RB.012 | Rigid body schema validity |
+| RB.COL.001–RB.COL.004 | Collision API schema validity |
 
-## Action Items
+⚠️ **Review needed:**
+- `JT.ART.001` (articulation capability) and `JT.ART.003` — are these general physics schema checks or SimReady-specific?
+- `RB.001` (rigid body capability), `RB.008` (rigid body static), `RB.010–RB.012` — general or SimReady?
 
-1. Remove SRF checkers for codes that OAV owns (AA.001, AA.002, HI.001, HI.003, HI.004, UN.001, UN.002)
-2. Remove OAV checkers for codes that SRF owns (UN.006, UN.007)
-3. Update namespaces in capabilities.json codegen
-4. SRF profiles inherit OAV base checks via the DAG (same pattern as usd.* bridge)
+### com.nvidia.oav.shade (8)
+
+| Code | Description |
+|------|------------|
+| VM.BIND.001, VM.BIND.002 | Material binding validity |
+| VM.MAT.001 | Material existence |
+| VM.MDL.001, VM.MDL.002 | MDL schema compliance |
+| VM.PS.001 | UsdPreviewSurface compliance |
+| VM.TEX.001, VM.TEX.002 | Texture validity |
+
+### com.nvidia.simready.hierarchy (7)
+
+| Code | Description |
+|------|------------|
+| HI.002 | Exclusive XForm parent | SimReady layout |
+| HI.005 | SimReady hierarchy structure | |
+| HI.006 | Placeable/posable xformable | SimReady convention |
+| HI.007 | SimReady hierarchy rules | |
+| HI.008 | Logical geometry grouping | SimReady convention |
+| HI.009 | Kinematic chain hierarchy | SimReady convention |
+| HI.010 | Undefined prims check | SimReady convention |
+
+### com.nvidia.simready.naming_paths (8)
+
+| Code | Description |
+|------|------------|
+| NP.001–NP.008 | All naming/path conventions | SimReady-specific |
+
+### com.nvidia.simready.units (5)
+
+| Code | Description |
+|------|------------|
+| UN.003 | kilogramsPerUnit | SimReady value |
+| UN.004 | Corrective transforms | SimReady convention |
+| UN.005 | timeCodesPerSecond | SimReady value |
+| UN.006 | upAxis = Z | Opinionated (not just "declared") |
+| UN.007 | metersPerUnit = 1.0 | Opinionated (not just "declared") |
+
+### com.nvidia.simready.semantic_labels (4)
+
+| Code | Description |
+|------|------------|
+| SL.001, SL.003, SL.NV.002, SL.QCODE.001 | All semantic labels | SimReady-specific |
+
+### com.nvidia.simready.nonvisual_materials (6)
+
+| Code | Description |
+|------|------------|
+| NVM.001–NVM.006 | All non-visual materials | SimReady-specific |
+
+### com.nvidia.simready.driven_joints (11)
+
+| Code | Description |
+|------|------------|
+| DJ.001–DJ.011 | All driven joint conventions | SimReady-specific |
+
+### com.nvidia.simready.base_articulation (2)
+
+| Code | Description |
+|------|------------|
+| BA.001, BA.002 | Base articulation rules | SimReady-specific |
+
+### com.nvidia.simready.* (misc) (6)
+
+| Code | Namespace | Description |
+|------|-----------|------------|
+| AA.OV.001 | simready.core | USDZ UDIM limitation (Kit-specific) |
+| COL.001 | simready.colliders | Collider convention |
+| GSP.001 | simready.graspable | Graspable physics |
+| PHYSX.COL.001-002 | simready.physx | PhysX-specific colliders |
+| PMT.001 | simready.physics_materials | Physics materials convention |
+| RB.MB.001 | simready.physics | Multi-body convention |
+| SR.001 | simready.sim_ready | SimReady capability check |
+
+## Summary
+
+| Namespace | Count | Description |
+|-----------|-------|-------------|
+| `com.nvidia.oav.core` | 7 | Basic USD validity |
+| `com.nvidia.oav.geom` | 31 | Geometry validity |
+| `com.nvidia.oav.physics` | 21 | Physics schema validity |
+| `com.nvidia.oav.shade` | 8 | Material/shader validity |
+| **OAV subtotal** | **67** | |
+| `com.nvidia.simready.*` | 51 | Simulation conformance |
+| **Total** | **118** | |
+
+## Open Questions for Review
+
+1. **VG.MESH.001** (must contain mesh) — Is "assets must have mesh geometry" a general USD check or a SimReady convention? Non-mesh USD files (volumes, curves, points) are perfectly valid.
+
+2. **VG.RTX.001** (RTX extreme extents) — This is NVIDIA RTX-specific. Should it be `com.nvidia.oav.geom` or `com.nvidia.simready.geom`?
+
+3. **VG.025** (asset origin positioning) — "Origin should be at a specific location" feels opinionated/SimReady rather than general USD validity.
+
+4. **JT.ART.001, JT.ART.003** — Are articulation capability and articulation pose checks general USD physics or SimReady-specific?
+
+5. **RB.001, RB.008, RB.010-RB.012** — Some rigid body checks may be SimReady-specific (e.g. "rigid body capability" vs "rigid body schema validity"). Need per-code review.
+
+6. **Should `com.nvidia.oav` be just `oav`?** The `com.nvidia` prefix implies vendor ownership, but OAV checks are meant to be general USD hygiene. Maybe just `oav.geom`, `oav.physics`, etc.?
